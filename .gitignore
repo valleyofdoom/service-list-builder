@@ -1,0 +1,3 @@
+*.pyc
+service_list_builder/build
+/build
