@@ -200,8 +200,6 @@ def main() -> int:
     config.optionxform = lambda optionstr: optionstr
     config.read(args.config)
 
-    service_dump: set[str] = set()
-
     # load sections from config and handle case insensitive entries
     enabled_services = parse_config_list(config["enabled_services"], present_services)
     individual_disabled_services = parse_config_list(
@@ -209,6 +207,9 @@ def main() -> int:
         present_services,
     )
     rename_binaries = {binary for binary in config["rename_binaries"] if binary != ""}
+
+    # start service_dump with the individual disabled services section
+    service_dump: set[str] = individual_disabled_services.copy()
 
     # check dependencies
     has_dependency_errors = False
@@ -261,7 +262,7 @@ def main() -> int:
             "\\??\\": "",
         }
 
-        for service_name in service_dump.union(individual_disabled_services):
+        for service_name in service_dump:
             image_path = read_value(f"{HIVE}\\Services\\{service_name}", "ImagePath")
 
             if image_path is None:
