@@ -217,23 +217,6 @@ def main() -> int:
     # required for lowercase comparison
     lower_services_set: set[str] = {service.lower() for service in enabled_services}
 
-    for service in enabled_services.union(individual_disabled_services):
-        # get a set of the dependencies in lowercase
-        dependencies = {service.lower() for service in get_dependencies(service, kernel_mode=False)}
-
-        # check which dependencies are not in the user's list
-        # then get the actual name from present_services as it was converted to lowercase to handle case inconsistency in Windows
-        missing_dependencies = {
-            present_services[dependency] for dependency in dependencies.difference(lower_services_set)
-        }
-
-        if len(missing_dependencies) > 0:
-            has_dependency_errors = True
-            LOG_CLI.error("%s depends on %s", service, ", ".join(missing_dependencies))
-
-    if has_dependency_errors:
-        return 1
-
     if enabled_services:
         # populate service_dump with all user mode services that are not in enabled_services section
         for lower_service_name, service_name in present_services.items():
@@ -248,6 +231,54 @@ def main() -> int:
 
                 if service_type in USER_MODE_TYPES:
                     service_dump.add(service_name)
+
+    for service in enabled_services:
+        # get a set of the dependencies in lowercase
+        dependencies = {service.lower() for service in get_dependencies(service, kernel_mode=False)}
+
+        # check which dependencies are not in the user's list
+        # then get the actual name from present_services as it was converted to lowercase to handle case inconsistency in Windows
+        missing_dependencies = {
+            present_services[dependency] for dependency in dependencies.difference(lower_services_set)
+        }
+
+        if len(missing_dependencies) > 0:
+            has_dependency_errors = True
+            LOG_CLI.error("%s depends on %s", service, ", ".join(missing_dependencies))
+
+    # check for services that depend on ones that are getting disabled
+    requiredby_services: dict[str, set[str]] = {}
+
+    for lower_service_name, service_name in present_services.items():
+        # don't consider services that are getting disabled
+        if service_name in service_dump:
+            continue
+
+        dependencies = {service.lower() for service in get_dependencies(service_name, kernel_mode=True)}
+
+        for dependency in dependencies:
+            # somehow some services can depend on non-installed services...?
+            if dependency not in present_services:
+                continue
+
+            dependency_service_name = present_services[dependency]
+            is_usermode_service = read_value(f"{HIVE}\\Services\\{dependency_service_name}", "Type") in USER_MODE_TYPES
+
+            if (
+                enabled_services and is_usermode_service and (dependency_service_name not in enabled_services)
+            ) or dependency_service_name in individual_disabled_services:
+                has_dependency_errors = True
+
+                if dependency_service_name in requiredby_services:
+                    requiredby_services[dependency_service_name].add(service_name)
+                else:
+                    requiredby_services[dependency_service_name] = {service_name}
+
+    for service, requiredby_service in requiredby_services.items():
+        LOG_CLI.error("%s is required by %s", service, ", ".join(requiredby_service))
+
+    if has_dependency_errors:
+        return 1
 
     if not args.disable_service_warning:
         # check if any services are non-Windows services as the user
