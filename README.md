@@ -14,7 +14,7 @@ I am not responsible for damage caused to computer. This tool is powerful and fo
 
   - Individual services to disable can be explicitly specified in the ``[individual_disabled_services]`` section. This section does not follow the *disable all except* logic. Only the services specified in this section will get disabled. This is useful in situations where the user only needs to disable a few user-mode services instead of using the *batch* approach with ``[enabled_services]`` or you would like to disable kernel-mode services at all
 
-  - Paths to folders or binaries can be specified in the ``[rename_binaries]`` section. The logic behind this is that when a binary gets renamed to anything other than its original file name, it will not run
+  - Paths to folders or binaries can be specified in the ``[rename_binaries]`` section. The logic behind this is that when a binary gets renamed to anything other than its original file name, it will not run. Exclude the drive letter from the path as it is handled by the script. For example, ``C:\folder\program.exe`` should be written as ``\folder\program.exe``
 
 - Pass ``lists.ini`` as an argument to the program through the command-line with the command below to build the scripts
 
