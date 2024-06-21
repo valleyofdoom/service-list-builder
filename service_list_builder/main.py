@@ -14,7 +14,7 @@ import pywintypes
 import win32api
 import win32service
 import win32serviceutil
-from consts import HIVE, LOAD_HIVE_LINES, USER_MODE_TYPES, VERSION
+from consts import HIVE, IMAGEPATH_REPLACEMENTS, LOAD_HIVE_LINES, USER_MODE_TYPES, VERSION
 
 LOG_CLI = logging.getLogger("CLI")
 
@@ -72,8 +72,15 @@ def get_present_services() -> dict[str, str]:
 
             # handle (remove) user ID in service name
             if "_" in service_name:
-                LOG_CLI.debug('removing "_" in "%s"', service_name)
-                service_name = service_name.rpartition("_")[0]
+                service_name_without_id = service_name.rpartition("_")[0]
+
+                # checks to ensure the service is a windows user service
+                is_service_exists = read_value(f"{HIVE}\\Services\\{service_name_without_id}", "Start") is not None
+                is_win_service = is_windows_service(service_name_without_id)
+
+                if is_service_exists and is_win_service:
+                    LOG_CLI.debug('removing "_" in "%s"', service_name)
+                    service_name = service_name_without_id
 
             present_services[service_name.lower()] = service_name
 
@@ -144,6 +151,47 @@ def parse_args() -> argparse.Namespace:
         parser.error("--disable-running can only be used with --config")
 
     return args
+
+
+def is_windows_service(service_name: str) -> bool | None:
+    image_path = read_value(f"{HIVE}\\Services\\{service_name}", "ImagePath")
+
+    if image_path is None:
+        return None
+
+    path_match = re.match(r".*?\.(exe|sys)\b", image_path, re.IGNORECASE)
+
+    if path_match is None:
+        LOG_CLI.error("image path match failed for %s", image_path)
+        return None
+
+    # expand vars
+    binary_path: str = os.path.expandvars(path_match[0])
+    lower_binary_path = binary_path.lower()
+
+    # resolve paths
+    if lower_binary_path.startswith('"'):
+        lower_binary_path = lower_binary_path[1:]
+
+    for starts_with, replacement in IMAGEPATH_REPLACEMENTS.items():
+        if lower_binary_path.startswith(starts_with):
+            lower_binary_path = lower_binary_path.replace(starts_with, replacement)
+
+    if not os.path.exists(lower_binary_path):
+        LOG_CLI.info("unable to get binary path for %s", service_name)
+        return None
+
+    try:
+        company_name = get_file_metadata(lower_binary_path, "CompanyName")
+
+        if not company_name:
+            raise pywintypes.error
+
+    except pywintypes.error:
+        LOG_CLI.info("unable to get CompanyName for %s", service_name)
+        return None
+
+    return company_name == "Microsoft Corporation"
 
 
 def main() -> int:
@@ -305,55 +353,16 @@ def main() -> int:
         non_microsoft_service_count = 0
         unknown_company_service_count = 0
 
-        # use lowercase key as the path will be converted to lowercase when comparing
-        replacements = {
-            "\\systemroot\\": "C:\\Windows\\",
-            "system32\\": "C:\\Windows\\System32\\",
-            "\\??\\": "",
-        }
-
         for service_name in service_dump:
-            image_path = read_value(f"{HIVE}\\Services\\{service_name}", "ImagePath")
+            is_win_service = is_windows_service(service_name)
 
-            if image_path is None:
-                continue
-
-            path_match = re.match(r".*?\.(exe|sys)\b", image_path, re.IGNORECASE)
-
-            if path_match is None:
-                LOG_CLI.error("path match failed for %s", image_path)
+            if is_win_service is None:
                 unknown_company_service_count += 1
                 continue
 
-            # expand vars
-            binary_path: str = os.path.expandvars(path_match[0])
-            lower_binary_path = binary_path.lower()
-
-            # resolve paths
-            if lower_binary_path.startswith('"'):
-                lower_binary_path = lower_binary_path[1:]
-
-            for starts_with, replacement in replacements.items():
-                if lower_binary_path.startswith(starts_with):
-                    lower_binary_path = lower_binary_path.replace(starts_with, replacement)
-
-            if not os.path.exists(lower_binary_path):
-                print(f"unable to get binary path for {service_name}")
-                unknown_company_service_count += 1
-                continue
-
-            try:
-                company_name = get_file_metadata(lower_binary_path, "CompanyName")
-
-                if not company_name:
-                    raise pywintypes.error
-
-                if company_name != "Microsoft Corporation":
-                    print(f'"{service_name}" is not a Windows service')
-                    non_microsoft_service_count += 1
-            except pywintypes.error:
-                print(f"unable to get CompanyName for {service_name}")
-                unknown_company_service_count += 1
+            if not is_win_service:
+                LOG_CLI.info('"%s" is not a Windows service', service_name)
+                non_microsoft_service_count += 1
 
         if non_microsoft_service_count + unknown_company_service_count != 0:
             print(

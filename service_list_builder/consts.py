@@ -17,3 +17,10 @@ if not "%DRIVE_LETTER%" == "C" (
 
 reg query "HKLM\\%HIVE%" > nul 2>&1 || echo error: hive not exists or is unloaded && pause && exit /b 1
 """
+
+# use lowercase key as the path will be converted to lowercase when comparing
+IMAGEPATH_REPLACEMENTS = {
+    "\\systemroot\\": "C:\\Windows\\",
+    "system32\\": "C:\\Windows\\System32\\",
+    "\\??\\": "",
+}
