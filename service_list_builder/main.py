@@ -265,8 +265,11 @@ def main() -> int:
             is_usermode_service = read_value(f"{HIVE}\\Services\\{dependency_service_name}", "Type") in USER_MODE_TYPES
 
             if (
-                enabled_services and is_usermode_service and (dependency_service_name not in enabled_services)
-            ) or dependency_service_name in individual_disabled_services:
+                enabled_services
+                and is_usermode_service
+                and dependency_service_name not in enabled_services
+                or dependency_service_name in individual_disabled_services
+            ):
                 has_dependency_errors = True
 
                 if dependency_service_name in requiredby_services:
