@@ -1,4 +1,4 @@
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 USER_MODE_TYPES = {16, 32, 96, 288, 80, 272}
 HIVE = "SYSTEM\\CurrentControlSet"
 
