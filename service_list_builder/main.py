@@ -155,13 +155,13 @@ def is_windows_service(service_name: str) -> bool | None:
     image_path = read_value(f"{HIVE}\\Services\\{service_name}", "ImagePath")
 
     if image_path is None:
-        LOG_CLI.info("unable to get image path for %s", service_name)
+        LOG_CLI.info('unable to get image path for "%s"', service_name)
         return None
 
     path_match = re.match(r".*?\.(exe|sys)\b", image_path, re.IGNORECASE)
 
     if path_match is None:
-        LOG_CLI.error("image path match failed for %s", image_path)
+        LOG_CLI.error('image path match failed for "%s"', image_path)
         return None
 
     # expand vars
@@ -177,7 +177,7 @@ def is_windows_service(service_name: str) -> bool | None:
             lower_binary_path = lower_binary_path.replace(starts_with, replacement)
 
     if not os.path.exists(lower_binary_path):
-        LOG_CLI.info("unable to get binary path for %s", service_name)
+        LOG_CLI.info('unable to get binary path for "%s"', service_name)
         return None
 
     try:
@@ -187,7 +187,7 @@ def is_windows_service(service_name: str) -> bool | None:
             raise pywintypes.error
 
     except pywintypes.error:
-        LOG_CLI.info("unable to get CompanyName for %s", service_name)
+        LOG_CLI.info('unable to get CompanyName for "%s"', service_name)
         return None
 
     return company_name == "Microsoft Corporation"
