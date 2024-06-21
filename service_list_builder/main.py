@@ -74,11 +74,9 @@ def get_present_services() -> dict[str, str]:
             if "_" in service_name:
                 service_name_without_id = service_name.rpartition("_")[0]
 
-                # checks to ensure the service is a windows user service
-                is_service_exists = read_value(f"{HIVE}\\Services\\{service_name_without_id}", "Start") is not None
-                is_win_service = is_windows_service(service_name_without_id)
+                is_service_exists = service_name_without_id.lower() in present_services
 
-                if is_service_exists and is_win_service:
+                if is_service_exists:
                     LOG_CLI.debug('removing "_" in "%s"', service_name)
                     service_name = service_name_without_id
 
@@ -157,6 +155,7 @@ def is_windows_service(service_name: str) -> bool | None:
     image_path = read_value(f"{HIVE}\\Services\\{service_name}", "ImagePath")
 
     if image_path is None:
+        LOG_CLI.info("unable to get image path for %s", service_name)
         return None
 
     path_match = re.match(r".*?\.(exe|sys)\b", image_path, re.IGNORECASE)
