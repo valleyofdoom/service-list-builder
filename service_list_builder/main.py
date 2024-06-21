@@ -232,6 +232,8 @@ def main() -> int:
                 if service_type in USER_MODE_TYPES:
                     service_dump.add(service_name)
 
+    dependencies_to_resolve: set[str] = set()
+
     for service in enabled_services:
         # get a set of the dependencies in lowercase
         dependencies = {service.lower() for service in get_dependencies(service, kernel_mode=False)}
@@ -245,6 +247,7 @@ def main() -> int:
         if len(missing_dependencies) > 0:
             has_dependency_errors = True
             LOG_CLI.error("%s depends on %s", service, ", ".join(missing_dependencies))
+            dependencies_to_resolve.update(missing_dependencies)
 
     # check for services that depend on ones that are getting disabled
     requiredby_services: dict[str, set[str]] = {}
@@ -279,6 +282,19 @@ def main() -> int:
 
     for service, requiredby_service in requiredby_services.items():
         LOG_CLI.error("%s is required by %s", service, ", ".join(requiredby_service))
+        dependencies_to_resolve.add(service)
+
+    if dependencies_to_resolve:
+        print()  # new line to separate logs
+
+    for service in dependencies_to_resolve:
+        if service in individual_disabled_services:
+            LOG_CLI.info("remove %s from [individual_disabled_services] to fix dependency errors", service)
+
+        is_usermode_service = read_value(f"{HIVE}\\Services\\{service}", "Type") in USER_MODE_TYPES
+
+        if enabled_services and is_usermode_service:
+            LOG_CLI.info("add %s to [enabled_services] to fix dependency errors", service)
 
     if has_dependency_errors:
         return 1
