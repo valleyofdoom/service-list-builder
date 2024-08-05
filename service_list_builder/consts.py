@@ -4,6 +4,8 @@ HIVE = "SYSTEM\\CurrentControlSet"
 
 LOAD_HIVE_LINES = f"""@echo off
 REM This script was built using service-list-builder v{VERSION}
+REM ---> IMPORTANT: Do NOT run this script on any system other than the one it was generated on <---
+
 REM Set drive letter to target
 set "DRIVE_LETTER=C"
 
