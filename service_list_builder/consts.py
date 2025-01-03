@@ -1,5 +1,9 @@
 VERSION = "1.6.3"
-USER_MODE_TYPES = {16, 32, 96, 288, 80, 272}
+
+# 0x10 and above are user mode services
+# https://learn.microsoft.com/en-us/dotnet/api/system.serviceprocess.servicetype?view=net-9.0-pp#fields
+USER_MODE_TYPE_THRESHOLD = 0x10
+
 HIVE = "SYSTEM\\CurrentControlSet"
 
 LOAD_HIVE_LINES = f"""@echo off

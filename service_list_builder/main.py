@@ -14,7 +14,7 @@ import pywintypes
 import win32api
 import win32service
 import win32serviceutil
-from consts import HIVE, IMAGEPATH_REPLACEMENTS, LOAD_HIVE_LINES, USER_MODE_TYPES, VERSION
+from consts import HIVE, IMAGEPATH_REPLACEMENTS, LOAD_HIVE_LINES, USER_MODE_TYPE_THRESHOLD, VERSION
 
 LOG_CLI = logging.getLogger("CLI")
 
@@ -48,7 +48,7 @@ def get_dependencies(service: str, kernel_mode: bool) -> set[str]:
         dependencies = [
             dependency
             for dependency in dependencies
-            if read_value(f"{HIVE}\\Services\\{dependency}", "Type") in USER_MODE_TYPES
+            if read_value(f"{HIVE}\\Services\\{dependency}", "Type") >= USER_MODE_TYPE_THRESHOLD
         ]
 
     child_dependencies = {
@@ -280,7 +280,7 @@ def main() -> int:
             if service_type is not None:
                 service_type = int(service_type)
 
-                if service_type in USER_MODE_TYPES:
+                if service_type >= USER_MODE_TYPE_THRESHOLD:
                     service_dump.add(service_name)
 
     dependencies_to_resolve: set[str] = set()
@@ -316,7 +316,9 @@ def main() -> int:
                 continue
 
             dependency_service_name = present_services[dependency]
-            is_usermode_service = read_value(f"{HIVE}\\Services\\{dependency_service_name}", "Type") in USER_MODE_TYPES
+            is_usermode_service = (
+                read_value(f"{HIVE}\\Services\\{dependency_service_name}", "Type") >= USER_MODE_TYPE_THRESHOLD
+            )
 
             if (
                 enabled_services
@@ -342,7 +344,7 @@ def main() -> int:
         if service in individual_disabled_services:
             LOG_CLI.info("remove %s from [individual_disabled_services] to fix dependency errors", service)
 
-        is_usermode_service = read_value(f"{HIVE}\\Services\\{service}", "Type") in USER_MODE_TYPES
+        is_usermode_service = read_value(f"{HIVE}\\Services\\{service}", "Type") >= USER_MODE_TYPE_THRESHOLD
 
         if enabled_services and is_usermode_service:
             LOG_CLI.info("add %s to [enabled_services] to fix dependency errors", service)
