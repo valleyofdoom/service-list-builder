@@ -234,6 +234,10 @@ def main() -> int:
         )
         return 0
 
+    if not os.path.splitext(args.config)[1] == ".ini":
+        LOG_CLI.error("config must be of .ini")
+        return 1
+
     if not os.path.exists(args.config):
         LOG_CLI.error("config file %s not found", args.config)
         return 1
