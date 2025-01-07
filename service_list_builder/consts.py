@@ -1,4 +1,4 @@
-VERSION = "1.6.4"
+VERSION = "1.6.5"
 
 # 0x10 and above are user mode services
 # https://learn.microsoft.com/en-us/dotnet/api/system.serviceprocess.servicetype?view=net-9.0-pp#fields
