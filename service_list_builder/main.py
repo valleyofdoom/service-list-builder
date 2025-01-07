@@ -70,15 +70,29 @@ def get_present_services() -> dict[str, str]:
         for i in range(num_subkeys):
             service_name = winreg.EnumKey(key, i)
 
-            # handle (remove) user ID in service name
-            if "_" in service_name:
-                service_name_without_id = service_name.rpartition("_")[0]
+            # SERVICE_KERNEL_DRIVER                      0x1        0000 0000 0001
+            # SERVICE_FILE_SYSTEM_DRIVER                 0x2        0000 0000 0010
+            # SERVICE_ADAPTER                            0x4        0000 0000 0100
+            # SERVICE_RECOGNIZER_DRIVER                  0x8        0000 0000 1000
+            # SERVICE_WIN32_OWN_PROCESS                  0x10       0000 0001 0000
+            # SERVICE_WIN32_SHARE_PROCESS                0x20       0000 0010 0000
+            # SERVICE_USER_OWN_PROCESS_TEMPLATE          0x50       0000 0101 0000
+            # SERVICE_USER_SHARE_PROCESS_TEMPLATE        0x60       0000 0110 0000
+            # SERVICE_USER_OWN_PROCESS_INSTANCE          0xD0       0000 1101 0000
+            # SERVICE_USER_SHARE_PROCESS_INSTANCE        0xE0       0000 1110 0000
+            # SERVICE_WIN32_PROCESS_INTERACTIVE          0x100      0001 0000 0000
+            # SERVICE_WIN32_OWN_PROCESS_INTERACTIVE      0x110      0001 0001 0000
+            # SERVICE_WIN32_SHARE_PROCESS_INTERACTIVE    0x120      0001 0010 0000
+            # SERVICE_WIN32_PACKAGED_PROCESS             0x210      0010 0001 0000
 
-                is_service_exists = service_name_without_id.lower() in present_services
+            # 0x80 = 0 - per-user session service *template*
+            # 0x80 = 1 - per-user session service *instance*
 
-                if is_service_exists:
-                    LOG_CLI.debug('removing "_" in "%s"', service_name)
-                    service_name = service_name_without_id
+            # skip any instances as the template needs to be disabled in order to prevent the instance being created
+            if (
+                service_type := read_value(f"{HIVE}\\Services\\{service_name}", "Type")
+            ) is not None and service_type & 0x80 == 0x80:
+                continue
 
             present_services[service_name.lower()] = service_name
 
