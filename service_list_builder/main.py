@@ -468,7 +468,7 @@ def main() -> int:
     if not os.path.exists("build"):
         os.mkdir("build")
 
-    build_dir = os.path.join("build", f"build-{current_time.strftime("%d%m%y%H%M%S")}")
+    build_dir = os.path.join("build", f"build-{current_time.strftime('%d%m%y%H%M%S')}")
 
     os.makedirs(build_dir)
 
