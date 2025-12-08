@@ -13,7 +13,11 @@ REM ---> IMPORTANT: Do NOT run this script on any system other than the one it w
 REM Set drive letter to target
 set "DRIVE_LETTER=C"
 
-if "%SystemDrive%" == "X:" (
+set "loadHive=0"
+if not "%DRIVE_LETTER%" == "C" (set "loadHive=1")
+if "%SystemDrive%" == "X:" (set "loadHive=1")
+
+if "%loadHive%" == "1" (
     reg load "HKLM\\tempSYSTEM" "%DRIVE_LETTER%:\\Windows\\System32\\config\\SYSTEM"
     if not %errorlevel% == 0 (echo error: failed to load SYSTEM hive, is DRIVE_LETTER correct? && pause && exit /b 1)
     set "HIVE=tempSYSTEM\\ControlSet001"
