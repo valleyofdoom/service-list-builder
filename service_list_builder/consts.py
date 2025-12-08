@@ -13,15 +13,15 @@ REM ---> IMPORTANT: Do NOT run this script on any system other than the one it w
 REM Set drive letter to target
 set "DRIVE_LETTER=C"
 
-if not "%DRIVE_LETTER%" == "C" (
+if "%SystemDrive%" == "X:" (
     reg load "HKLM\\tempSYSTEM" "%DRIVE_LETTER%:\\Windows\\System32\\config\\SYSTEM"
-    if not %errorlevel% == 0 (echo error: failed to load SYSTEM hive && pause && exit /b 1)
+    if not %errorlevel% == 0 (echo error: failed to load SYSTEM hive, is DRIVE_LETTER correct? && pause && exit /b 1)
     set "HIVE=tempSYSTEM\\ControlSet001"
 ) else (
     set "HIVE={HIVE}"
 )
 
-reg query "HKLM\\%HIVE%" > nul 2>&1 || echo error: hive not exists or is unloaded && pause && exit /b 1
+reg query "HKLM\\%HIVE%" > nul 2>&1 || echo error: hive not exists or couldn't be loaded && pause && exit /b 1
 """
 
 # use lowercase key as the path will be converted to lowercase when comparing
